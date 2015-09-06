@@ -1,0 +1,84 @@
+---
+title: "SF Crime Classification"
+author: "Jerome & Chris"
+date: "6 September 2015"
+output: html_document
+---
+
+# Introduction
+This is an easy way to share our exploratory data analysis for the Kaggle Competition - https://www.kaggle.com/c/sf-crime.
+
+# Data Load
+Normally I'd load the data in from the website in the script, but it's not working so I'll just assume that it's in the working directory.
+
+Note: I experimented with setting StringsAsFactors = FALSE, but I ran into some crashes, so am sticking with the default.
+
+```{r DataLoad, cache = TRUE}
+train <- read.csv("train.csv")
+#test <- read.csv("test.csv")
+```
+
+# Data Cleaning
+Description and Resolution fields do not exist in the test dataset. Leave them in for exploration to see whether we can find any patterns in the remaining fields which could be good features. We'll remove them from dataset before fitting a model.
+
+- There are 67 records where Latitude (Y) = 90, which is the North pole. The summary below shows that these are evenly distributed, so they can be removed.
+
+```{r Latitude90}
+summary(train[train$Y > 40,])
+
+train2 <- train[train$Y < 40,] 
+```
+
+
+# Feature Engineering
+## Time and Date
+Lets split the date into three features - Year, Month and Hour. Then drop the date field.
+
+One possible alternative would be TimeOfDay. Splitting hour into six hour segments:
+
+- Midnight - 6am: Overnight
+- 6am - Midday: Morning
+- Midday - 6pm: Afternoon
+- 6pm - Midnight: Evening
+
+```{r YearMonthHour}
+library(lubridate)
+train2$Year <- year(train2$Dates)
+train2$Month <- month(train2$Dates)
+train2$Hour <- hour(train2$Dates)
+```
+
+## Address
+One simple approach would be to categorise addresses by Block or Corner. Output below shows that all addresses are either block or corner.
+
+```{r Address}
+train2$Block <- grepl("Block of", train2$Address)
+
+# Check that all other rows are corners
+block <- sum(train2$Block)
+corner <- sum(grepl("/", train2$Address))
+block + corner
+nrow(train2)
+```
+
+## Summary
+```{r Summary}
+summary(train2)
+```
+
+## Subset of data
+To enable quick plotting of trends, create a subset of the data, removing the rows which are not in the model.
+
+```{r Subset}
+set.seed(42)
+sample.rows <- sample(1:nrow(train2), 5000)
+train3 <- train2[sample.rows,]
+train3$Dates <- NULL
+train3$Descript <- NULL
+train3$Resolution <- NULL
+train3$Address <- NULL
+train3$X <- NULL
+train3$Y <- NULL
+```
+
+# Exploratory Data Analysis
