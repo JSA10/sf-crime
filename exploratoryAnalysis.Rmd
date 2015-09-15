@@ -61,10 +61,6 @@ block + corner
 nrow(train2)
 ```
 
-## Summary
-```{r Summary}
-summary(train2)
-```
 
 ## Subset of data
 To enable quick plotting of trends, create a subset of the data, removing the rows which are not in the model.
@@ -82,3 +78,48 @@ train3$Y <- NULL
 ```
 
 # Exploratory Data Analysis
+To begin with we'll create summary dataframes and charts for the proportion of each Category, by the main address and date-time factors. We'll calculate a ratio to highlight trends in the data.
+
+## Incident Category by Hour
+Inspection of the plots below indicate that splitting the Hour into four, six hour periods would generate a good approximation to the data. Crime categories tend to have a profile that is greater during night, morning, afternoon and evening.
+
+```{r CategoryByHour, fig.width = 10, fig.height = 8}
+suppressMessages(library(dplyr))
+library(ggplot2)
+ratio.Hour <- train2 %>%
+  group_by(Category, Hour) %>%
+  summarize(count = n()) %>%
+  group_by(Hour) %>%
+  mutate (hc = sum(count)) %>%
+  ungroup() %>%
+  mutate (ratio = count / hc)
+
+ggplot(ratio.Hour, aes(Hour, ratio)) + 
+  geom_line(aes(colour = Category)) + 
+  facet_wrap(~ Category, ncol = 5, scales = "free_y") +
+  scale_x_continuous(breaks=c(0, 6, 12, 18, 24)) +
+  theme(legend.position="none")
+```
+
+## Incident Category by Hour
+Inspection of the plots below indicate that we should retain Day as a factor with seven levels. The obvious alternative is a two level factor with "Weekday" and "Weekend", but there is a lot of variation in the data which would be lost if we went with this approach.
+
+```{r CategoryByDay, fig.width = 10, fig.height = 8}
+ratio.Day <- train2 %>%
+  group_by(Category, DayOfWeek) %>%
+  summarize(count = n()) %>%
+  group_by(DayOfWeek) %>%
+  mutate(dc = sum(count)) %>%
+  ungroup() %>%
+  mutate(ratio = count / dc) 
+
+ratio.Day$DayOfWeek <- factor(ratio.Day$DayOfWeek,
+                              levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday", "Sunday"),
+                              labels = c("M", "Tu", "W", "Th", "F", "Sa", "Su"),
+                              ordered = TRUE)
+
+ggplot(ratio.Day, aes(DayOfWeek, ratio)) + 
+  geom_line(aes(colour = Category, group = Category)) + 
+  facet_wrap(~ Category, ncol = 5, scales = "free_y") +
+  theme(legend.position="none")
+```
