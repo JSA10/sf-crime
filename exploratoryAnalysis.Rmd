@@ -80,12 +80,21 @@ train3$Y <- NULL
 # Exploratory Data Analysis
 To begin with we'll create summary dataframes and charts for the proportion of each Category, by the main address and date-time factors. We'll calculate a ratio to highlight trends in the data.
 
-## Incident Category by Hour
-Inspection of the plots below indicate that splitting the Hour into four, six hour periods would generate a good approximation to the data. Crime categories tend to have a profile that is greater during night, morning, afternoon and evening.
-
-```{r CategoryByHour, fig.width = 10, fig.height = 8}
+## Incident Category
+```{r Category}
 suppressMessages(library(dplyr))
 library(ggplot2)
+ggplot(train2, aes(Category)) +
+  geom_histogram(aes(fill = Category)) +
+  scale_y_continuous() +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+## Incident Category by Hour
+Inspection of the plots below indicate that splitting the Hour into four, six hour periods could generate a good approximation to the data. Crime categories tend to have a profile that is greater during night, morning, afternoon and evening.
+
+```{r CategoryByHour, fig.width = 10, fig.height = 8}
 ratio.Hour <- train2 %>%
   group_by(Category, Hour) %>%
   summarize(count = n()) %>%
@@ -98,10 +107,11 @@ ggplot(ratio.Hour, aes(Hour, ratio)) +
   geom_line(aes(colour = Category)) + 
   facet_wrap(~ Category, ncol = 5, scales = "free_y") +
   scale_x_continuous(breaks=c(0, 6, 12, 18, 24)) +
+  expand_limits(y = 0) + 
   theme(legend.position="none")
 ```
 
-## Incident Category by Hour
+## Incident Category by Day
 Inspection of the plots below indicate that we should retain Day as a factor with seven levels. The obvious alternative is a two level factor with "Weekday" and "Weekend", but there is a lot of variation in the data which would be lost if we went with this approach.
 
 ```{r CategoryByDay, fig.width = 10, fig.height = 8}
@@ -121,5 +131,100 @@ ratio.Day$DayOfWeek <- factor(ratio.Day$DayOfWeek,
 ggplot(ratio.Day, aes(DayOfWeek, ratio)) + 
   geom_line(aes(colour = Category, group = Category)) + 
   facet_wrap(~ Category, ncol = 5, scales = "free_y") +
+  expand_limits(y = 0) + 
   theme(legend.position="none")
 ```
+
+
+## Incident Category by Month
+Inspection of the plots below indicate that w
+
+```{r CategoryByMonth, fig.width = 10, fig.height = 8}
+ratio.Month <- train2 %>%
+  group_by(Category, Month) %>%
+  summarize(count = n()) %>%
+  group_by(Month) %>%
+  mutate(dc = sum(count)) %>%
+  ungroup() %>%
+  mutate(ratio = count / dc) 
+
+ggplot(ratio.Month, aes(Month, ratio)) + 
+  geom_line(aes(colour = Category, group = Category)) + 
+  facet_wrap(~ Category, ncol = 5, scales = "free_y") +
+  scale_x_continuous(breaks=c(1, 4, 7, 10), 
+                     minor_breaks = c(2, 3, 5, 6, 8, 9, 11, 12),
+                     labels = c("Jan", "Apr", "Jul", "Oct")) +
+  expand_limits(y = 0) + 
+  theme(legend.position="none")
+```
+
+
+## Incident Category by Year
+Inspection of the plots below indicate that w
+
+```{r CategoryByYear, fig.width = 10, fig.height = 8}
+ratio.Year <- train2 %>%
+  group_by(Category, Year) %>%
+  summarize(count = n()) %>%
+  group_by(Year) %>%
+  mutate(dc = sum(count)) %>%
+  ungroup() %>%
+  mutate(ratio = count / dc) 
+
+ggplot(ratio.Year, aes(Year, ratio)) + 
+  geom_line(aes(colour = Category, group = Category)) + 
+  facet_wrap(~ Category, ncol = 5, scales = "free_y") +
+  scale_x_continuous(breaks=c(2003, 2007, 2011, 2015)) +  
+  expand_limits(y = 0) + 
+  theme(legend.position="none")
+```
+
+
+## Incident Category by PdDistrict
+Inspection of the plots below indicate that w
+
+```{r CategoryByPdDistrict, fig.width = 10, fig.height = 8}
+ratio.PdDistrict <- train2 %>%
+  group_by(Category, PdDistrict) %>%
+  summarize(count = n()) %>%
+  group_by(PdDistrict) %>%
+  mutate(dc = sum(count)) %>%
+  ungroup() %>%
+  mutate(ratio = count / dc) 
+
+ggplot(ratio.PdDistrict, aes(PdDistrict, ratio)) + 
+  geom_line(aes(colour = Category, group = Category)) + 
+  facet_wrap(~ Category, ncol = 5, scales = "free_y") +
+  expand_limits(y = 0) + 
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+## Incident Category by Block
+Inspection of the plots below indicate that w
+
+```{r CategoryByBlock, fig.width = 10, fig.height = 8}
+ratio.Block <- train2 %>%
+  group_by(Category, Block) %>%
+  summarize(count = n()) %>%
+  group_by(Block) %>%
+  mutate(dc = sum(count)) %>%
+  ungroup() %>%
+  mutate(ratio = count / dc) 
+
+ggplot(ratio.Block, aes(Block, ratio)) + 
+  geom_boxplot(aes(colour = Category)) + 
+  facet_wrap(~ Category, ncol = 5, scales = "free_y") +
+  scale_x_discrete(labels = c("Corner", "Block"))
+  expand_limits(y = 0) + 
+  theme(legend.position="none")
+```
+
+
+
+
+
+
+https://www.kaggle.com/ifness/sf-crime/prevalent-crimes-in-san-francisco
+
+Remove vehicle crimes from 2005
