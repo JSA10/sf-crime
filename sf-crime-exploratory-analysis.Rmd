@@ -1,5 +1,5 @@
 ---
-title: "SF Crime Classification"
+title: "SF Crime Exploratory Analysis"
 author: "Jerome & Chris"
 date: "6 September 2015"
 output: html_document
@@ -23,10 +23,10 @@ Description and Resolution fields do not exist in the test dataset. Leave them i
 
 - There are 67 records where Latitude (Y) = 90, which is the North pole. The summary below shows that these are evenly distributed, so they can be removed.
 
-```{r Latitude90}
-summary(train[train$Y > 40,])
+```{r Latitude90, cache = TRUE}
+summary(train[train$Y == 90,])
 
-train2 <- train[train$Y < 40,] 
+train2 <- train[train$Y < 90,] 
 ```
 
 
@@ -41,7 +41,7 @@ One possible alternative would be TimeOfDay. Splitting hour into six hour segmen
 - Midday - 6pm: Afternoon
 - 6pm - Midnight: Evening
 
-```{r YearMonthHour}
+```{r YearMonthHour, cache = TRUE}
 library(lubridate)
 train2$Year <- year(train2$Dates)
 train2$Month <- month(train2$Dates)
@@ -51,7 +51,7 @@ train2$Hour <- hour(train2$Dates)
 ## Address
 One simple approach would be to categorise addresses by Block or Corner. Output below shows that all addresses are either block or corner.
 
-```{r Address}
+```{r Address, cache = TRUE}
 train2$Block <- grepl("Block of", train2$Address)
 
 # Check that all other rows are corners
@@ -63,9 +63,9 @@ nrow(train2)
 
 
 ## Subset of data
-To enable quick plotting of trends, create a subset of the data, removing the rows which are not in the model.
+To enable quick plotting of trends or experimentation with different models, create a subset of the data, removing the rows which we won't use in the model.
 
-```{r Subset}
+```{r Subset, cache = TRUE}
 set.seed(42)
 sample.rows <- sample(1:nrow(train2), 5000)
 train3 <- train2[sample.rows,]
@@ -73,28 +73,34 @@ train3$Dates <- NULL
 train3$Descript <- NULL
 train3$Resolution <- NULL
 train3$Address <- NULL
-train3$X <- NULL
-train3$Y <- NULL
+
 ```
 
 # Exploratory Data Analysis
-To begin with we'll create summary dataframes and charts for the proportion of each Category, by the main address and date-time factors. We'll calculate a ratio to highlight trends in the data.
+To begin with we'll order the categories, with the most frequent first. Then create summary dataframes and charts for the proportion of each category, by each address and date-time factor. We'll calculate a ratio to highlight trends in the data.
 
 ## Incident Category
-```{r Category}
+```{r Category, cache = TRUE, fig.height = 10}
 suppressMessages(library(dplyr))
 library(ggplot2)
+
+total.category <- table(train2$Category)
+order.category <- order(total.category, decreasing = TRUE)
+train2$Category <- factor(train2$Category, levels = names(total.category[order.category]))
+
 ggplot(train2, aes(Category)) +
   geom_histogram(aes(fill = Category)) +
   scale_y_continuous() +
-  theme(legend.position="none", axis.text.x = element_text(angle = 45, hjust = 1))
+  scale_x_discrete(limits = levels(train2$Category)[39:1]) +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip()
 
 ```
 
 ## Incident Category by Hour
-Inspection of the plots below indicate that splitting the Hour into four, six hour periods could generate a good approximation to the data. Crime categories tend to have a profile that is greater during night, morning, afternoon and evening.
+Inspection of the plots below shows that there is significant variation in the type of crime depending on the time. Therefore we will not group the time of day into larger blocks of time. 
 
-```{r CategoryByHour, fig.width = 10, fig.height = 8}
+```{r CategoryByHour, fig.width = 10, fig.height = 8, cache = TRUE}
 ratio.Hour <- train2 %>%
   group_by(Category, Hour) %>%
   summarize(count = n()) %>%
@@ -112,9 +118,10 @@ ggplot(ratio.Hour, aes(Hour, ratio)) +
 ```
 
 ## Incident Category by Day
-Inspection of the plots below indicate that we should retain Day as a factor with seven levels. The obvious alternative is a two level factor with "Weekday" and "Weekend", but there is a lot of variation in the data which would be lost if we went with this approach.
+Inspection of the plots below indicate that there isn't as much variation as in Incident Category by Hour, but there can still be up to 25% variation in the top 15 crimes. To reduce the number of variables the obvious alternative is a two level factor with "Weekday" and "Weekend". This might be a reasonable approximation, but isn't clear cut. Let's start with a 7 level factor, and try a 2 level factor as a possible improvement to the model.
 
-```{r CategoryByDay, fig.width = 10, fig.height = 8}
+
+```{r CategoryByDay, fig.width = 10, fig.height = 8, cache = TRUE}
 ratio.Day <- train2 %>%
   group_by(Category, DayOfWeek) %>%
   summarize(count = n()) %>%
@@ -137,9 +144,9 @@ ggplot(ratio.Day, aes(DayOfWeek, ratio)) +
 
 
 ## Incident Category by Month
-Inspection of the plots below indicate that w
+The differences between the monthly totals are marginal for the top crimes. Suggest dropping this factor from the model.
 
-```{r CategoryByMonth, fig.width = 10, fig.height = 8}
+```{r CategoryByMonth, fig.width = 10, fig.height = 8, cache = TRUE}
 ratio.Month <- train2 %>%
   group_by(Category, Month) %>%
   summarize(count = n()) %>%
@@ -160,9 +167,9 @@ ggplot(ratio.Month, aes(Month, ratio)) +
 
 
 ## Incident Category by Year
-Inspection of the plots below indicate that w
+Inspection of the plots below indicate that year is an important factor for use in the model.
 
-```{r CategoryByYear, fig.width = 10, fig.height = 8}
+```{r CategoryByYear, fig.width = 10, fig.height = 8, cache = TRUE}
 ratio.Year <- train2 %>%
   group_by(Category, Year) %>%
   summarize(count = n()) %>%
@@ -181,9 +188,9 @@ ggplot(ratio.Year, aes(Year, ratio)) +
 
 
 ## Incident Category by PdDistrict
-Inspection of the plots below indicate that w
+Inspection of the plots below indicate that PdDistrict is a valuable factor in the model.
 
-```{r CategoryByPdDistrict, fig.width = 10, fig.height = 8}
+```{r CategoryByPdDistrict, fig.width = 10, fig.height = 8, cache = TRUE}
 ratio.PdDistrict <- train2 %>%
   group_by(Category, PdDistrict) %>%
   summarize(count = n()) %>%
@@ -201,9 +208,9 @@ ggplot(ratio.PdDistrict, aes(PdDistrict, ratio)) +
 
 
 ## Incident Category by Block
-Inspection of the plots below indicate that w
+Inspection of the plots below indicate that there is a very significant difference between block and corner. This factor should be retained in the model.
 
-```{r CategoryByBlock, fig.width = 10, fig.height = 8}
+```{r CategoryByBlock, fig.width = 10, fig.height = 8, cache = TRUE}
 ratio.Block <- train2 %>%
   group_by(Category, Block) %>%
   summarize(count = n()) %>%
@@ -215,16 +222,8 @@ ratio.Block <- train2 %>%
 ggplot(ratio.Block, aes(Block, ratio)) + 
   geom_boxplot(aes(colour = Category)) + 
   facet_wrap(~ Category, ncol = 5, scales = "free_y") +
-  scale_x_discrete(labels = c("Corner", "Block"))
+  scale_x_discrete(labels = c("Corner", "Block")) +
   expand_limits(y = 0) + 
   theme(legend.position="none")
 ```
 
-
-
-
-
-
-https://www.kaggle.com/ifness/sf-crime/prevalent-crimes-in-san-francisco
-
-Remove vehicle crimes from 2005
