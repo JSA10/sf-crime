@@ -32,7 +32,9 @@ train2 <- train[train$Y < 90,]
 
 # Feature Engineering
 ## Time and Date
-Lets split the date into three features - Year, Month and Hour. Then drop the date field.
+Lets split the date into three features - Year, Month and Hour. This will allow us to ignore the date field.
+
+DayOfWeek can also be simplified from 7 levels by creating Weekend as a boolean. Saturday and Sunday would be true.
 
 One possible alternative would be TimeOfDay. Splitting hour into six hour segments:
 
@@ -46,6 +48,19 @@ library(lubridate)
 train2$Year <- year(train2$Dates)
 train2$Month <- month(train2$Dates)
 train2$Hour <- hour(train2$Dates)
+
+train2$Weekend <- train2$DayOfWeek %in% c("Saturday", "Sunday")
+
+train2$TimeOfDay <- cut(train2$Hour, 
+                        c(0, 6, 12, 18, 24), 
+                        labels = c("Overnight", "Morning", "Afternoon", "Evening"),
+                        right = FALSE)
+```
+
+A quick inspection of totals in each of these categories shows that splitting at hours 1, 7, 13 and 19 might be more representative. This is a fine detail that we can investigate later if time permits.
+
+```{r TimeOfDay}
+table(train2$Hour, train2$TimeOfDay)
 ```
 
 ## Address
